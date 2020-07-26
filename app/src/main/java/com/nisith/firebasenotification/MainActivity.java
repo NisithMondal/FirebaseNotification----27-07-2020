@@ -24,11 +24,9 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.InstanceIdResult;
-import com.nisith.firebasenotification.Model.Data;
-import com.nisith.firebasenotification.Model.MyResponse;
-import com.nisith.firebasenotification.Model.Notification;
-import com.nisith.firebasenotification.Model.Sender;
-import com.nisith.firebasenotification.Remote.APIService;
+import com.nisith.firebasenotification.Retrofit.Model.Data;
+import com.nisith.firebasenotification.Retrofit.Model.Notification;
+import com.nisith.firebasenotification.Retrofit.RetrofitServerRequest;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,8 +38,8 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseUser firebaseUser;
     private EditText titleET, bodyET;
     private Button sendButton;
+    private String deviceToken;
 
-    private APIService mService;
     private String otherDeviceToken;
 
     @Override
@@ -54,7 +52,6 @@ public class MainActivity extends AppCompatActivity {
         firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
         databaseReference = FirebaseDatabase.getInstance().getReference().child("users").child(firebaseUser.getUid());
         generateFCMToken();
-        mService = Common.getFCMClient();
 
 ////////////////////////////////////
         FirebaseDatabase.getInstance().getReference().child("users").child("YIqOS5oTfSMiCSjuKuDd9ir2Bex2")
@@ -80,27 +77,12 @@ public class MainActivity extends AppCompatActivity {
                 String title = titleET.getText().toString();
                 String body = bodyET.getText().toString();
                 String action = "com.nisith.firebasenotification.NISITH_MONDAL";
-
                 Notification notification = new Notification(title,body,action);
 //                Log.d("ABCDE",Common.currentToken);
-                Data data = new Data("Asish","22");
-                Sender sender = new Sender(otherDeviceToken,notification,data);
-                mService.sendNotification(sender)
-                        .enqueue(new Callback<MyResponse>() {
-                            @Override
-                            public void onResponse(Call<MyResponse> call, Response<MyResponse> response) {
-                                if (response.body().success == 1){
-                                    Toast.makeText(MainActivity.this, "Success", Toast.LENGTH_SHORT).show();
-                                }else {
-                                    Toast.makeText(MainActivity.this, "Failed", Toast.LENGTH_SHORT).show();
-                                }
-                            }
-
-                            @Override
-                            public void onFailure(Call<MyResponse> call, Throwable t) {
-                                Toast.makeText(MainActivity.this, "Failed", Toast.LENGTH_SHORT).show();
-                            }
-                        });
+                Data data = new Data("nisith","23",firebaseUser.getUid());
+                Log.d("abcd","iddddd= "+firebaseUser.getUid());
+                RetrofitServerRequest serverRequest = new RetrofitServerRequest(getApplicationContext());
+                serverRequest.sendNotification(otherDeviceToken, notification, data);
 
             }
         });
@@ -108,10 +90,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
-    private void fun(){
-
-    }
 
 
     private void generateFCMToken(){
@@ -121,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
                   public void onComplete(@NonNull Task<InstanceIdResult> task) {
                       if (task.isSuccessful()){
                           String token = task.getResult().getToken();
-                          Common.currentToken = token;
+                          deviceToken = token;
                           saveFCMToken(token);
                       }
                   }
@@ -134,6 +112,7 @@ public class MainActivity extends AppCompatActivity {
     private void saveFCMToken(String token){
         Map<String,Object> map = new HashMap<>();
         map.put("device_token", token);
+        map.put("name",firebaseUser.getEmail());
         databaseReference.updateChildren(map);
     }
 }
